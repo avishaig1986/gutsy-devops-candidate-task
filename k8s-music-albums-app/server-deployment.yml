@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: gutsy
+  labels:
+    app: music-albums-app
+  name: go-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: music-albums-app
+  template:
+    metadata:
+      labels:
+        app: music-albums-app
+    spec:
+      initContainers:
+      - name: wait-for-redis
+        image: goodsmileduck/redis-cli
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: redis-password
+        args: [ "sh", "-c", "until redis-cli -h redis-service.gutsy.svc.cluster.local -p 6379 -a $PASSWORD  get hello; do echo Sleeping; sleep 1; done; echo ready!; " ]
+      containers:
+      - name: go-server
+        image: docker.io/library/go-server:1.0.0
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        env:
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: redis-password
+        command: [/server]
+        args: [redis-service.gutsy.svc.cluster.local:6379 ]
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9090

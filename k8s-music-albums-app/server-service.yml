@@ -1,0 +1,12 @@
+kind: Service
+apiVersion: v1
+metadata:
+  namespace: gutsy
+  name: go-server-service
+spec:
+  selector:
+    app: music-albums-app
+  ports:
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090

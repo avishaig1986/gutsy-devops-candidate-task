@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: gutsy
+  name: redis
+spec:  
+  selector:
+    matchLabels:
+      app: music-albums-app
+  serviceName: redis
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: music-albums-app
+    spec:
+      containers:
+      - name: redis
+        image: docker.io/library/redis-db:1.0.0
+        resources:
+          requests:
+            cpu: 0.5
+            memory: 1Gi
+          limits:
+            cpu: 1
+            memory: 2Gi
+        env:
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: redis-password
+        args: ["--requirepass", "$(REDIS_PASSWORD)", "--dbfilename", "data.rdb", "--dir", "/data/db",]
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+          name: redis
+        volumeMounts:
+        - name: redis-data
+          mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 64Mi
